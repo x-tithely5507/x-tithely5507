@@ -1,0 +1,71 @@
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '操作'
+        required: true
+        default: '压测'
+        type: choice
+        options:
+          - 远程
+          - 压测
+          - 停止所有
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+run-name: '${{ inputs.action }}'
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        job_id: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - name: 设置环境变量
+        run: |
+          JOB_ID=${{ matrix.job_id }}
+          ACCOUNTS='[
+            [],
+            ["cuichengxi@outlook.com", "5fa39a4C21A585D62DF2", "3C7HWSVW5RE2NEIH"],
+            ["", "", ""],
+            ["", "", ""]
+          ]'
+          USERNAME=$(echo $ACCOUNTS | jq -r ".[$JOB_ID][0]")
+          PASSWORD=$(echo $ACCOUNTS | jq -r ".[$JOB_ID][1]")
+          SECRET=$(echo $ACCOUNTS | jq -r ".[$JOB_ID][2]")
+          
+          echo "GITHUB_USERNAME=$USERNAME" >> $GITHUB_ENV
+          echo "GITHUB_PASSWORD=$PASSWORD" >> $GITHUB_ENV
+          echo "GITHUB_SECRET=$SECRET" >> $GITHUB_ENV
+
+          yarn
+          yarn build
+
+      - name: 远程
+        if: ${{ inputs.action == '远程' }}
+        env:
+          REMOTE: true
+        run: | 
+          node dist/app.js
+
+      - name: 压测
+        if: ${{ inputs.action == '压测' }}
+        env:
+          STRESS_TEST: true
+        run: | 
+          node dist/app.js
+
+      - name: 停止所有
+        if: ${{ inputs.action == '停止所有' }}
+        env:
+          Stop_All_PIPELINES: true
+        run: | 
+          node dist/app.js
