@@ -1,0 +1,8 @@
+[build]
+command = "npm run build"
+publish = "dist"
+
+[[redirects]]
+from = "/old-path"
+to = "/new-path"
+status = 301
